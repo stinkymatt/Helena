@@ -24,6 +24,7 @@ import org.restlet.routing.Router;
 
 public final class HelenaApp extends Application
 {
+	public static final String DEFAULT_ROWS = "100";
 	private final StorageAccess storage;
 	private final String contextRoot;
 	
