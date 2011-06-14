@@ -21,7 +21,7 @@ Dependencies
 
 In addition to the Hector jars required on the classpath, you'll need the core restlet jar (org.restlet.jar) and also the jars required to make the converter service work.  I've only tested this with the Jackson jars providing a conversion to json.  Theoretically, anything that you can configure through the restlet converter service to convert Java Maps into some other variant should work.
 
-To get the jackson extension to work, you'll the following on your classpath:
+To get the jackson extension to work, you'll need the following on your classpath:
 
 - org.json.jar
 - org.restlet.ext.jackson.jar
@@ -42,7 +42,7 @@ TODO
 - Add more runtime integration options.
 - Add search capability.
 - Finish row paging mechanism.
-
+- Add support for OrderedPartitioner?
 
 
 
