@@ -46,7 +46,7 @@ public class StorageAccess
 	String clusterName = System.getProperty("helena.cluster.name","cluster");
 	//TODO make configurable
 	int defaultNumCols = 100;
-	int defaultNumRows = 100;
+	int defaultNumRows = 1; //TODO change this back!
 	Cluster cluster;
 	private String keyPrefix;
 	
@@ -125,36 +125,49 @@ public class StorageAccess
 		return getColumnsForKey(keyspace, cf, key, false, defaultNumCols);
 	}
 	
-	public Map<String, Map<String, String>> getRows(String keyspace, String cf, boolean reverse, int numCols, int numRows)
+	public Map<String, Map<String, String>> getRows(String keyspace, String cf, String startKey, int numRows, boolean reverse, int numCols)
 	{
-		//TODO add paging
 		Keyspace ks = getKeyspaceForName(keyspace);
 		RangeSlicesQuery<String, String, String> rowsQuery = HFactory.createRangeSlicesQuery(ks, s, s, s);
 		rowsQuery.setColumnFamily(cf);
-		rowsQuery.setKeys("", "");
+		rowsQuery.setKeys(startKey, "");
 		rowsQuery.setRange("", "", reverse, numCols);
 		rowsQuery.setRowCount(numRows + 1);
 
 		OrderedRows<String, String, String> result = rowsQuery.execute().get();
 		Map<String, Map<String, String>> rval = new HashMap<String, Map<String, String>>();
 		String keyurl = keyPrefix + '/' + keyspace + '/' + cf +'/';
+		int processedRows = 0;
 		for (Row<String,String,String> r : result)
 		{
-			String rowKey = keyurl + r.getKey();
-			Map<String, String> columns = new HashMap<String,String>();
-			for (HColumn<String, String>col: r.getColumnSlice().getColumns())
+			String rowKey;
+			//handle link to next page
+			if (processedRows >= numRows)
 			{
-				columns.put(col.getName(), col.getValue());
+				rowKey = keyPrefix + '/' + keyspace + '/' + cf + "?startKey=" + r.getKey() + "&numRows=" + numRows;
+				//assert r.getKey == result.peekLast().getKey()?
+				Map<String, String> link = new HashMap<String, String>();
+				link.put("href", rowKey);
+				rval.put("next", link);
 			}
-			rval.put(rowKey, columns);
+			else
+			{
+				rowKey = keyurl + r.getKey();
+				Map<String, String> columns = new HashMap<String,String>();
+				for (HColumn<String, String>col: r.getColumnSlice().getColumns())
+				{
+					columns.put(col.getName(), col.getValue());
+				}
+				rval.put(rowKey, columns);
+			}
+			processedRows++;
 		}
-
 		return rval;
 	}
 	
-	public Map<String, Map<String, String>> getRows(String keyspace, String cf)
+	public Map<String, Map<String, String>> getRows(String keyspace, String cf, String startKey, int numRows)
 	{
-		return getRows(keyspace, cf, false, defaultNumCols, defaultNumRows);
+		return getRows(keyspace, cf, startKey, numRows, false, defaultNumCols);
 	}
 	
 	public Map<String, String> getColumn(String keyspace, String cf, String key, String colName)
