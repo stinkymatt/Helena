@@ -24,7 +24,9 @@ public final class CFResource extends AbstractCassandraResource
 {
 	@Get
 	public Map<String, Map<String,String>> getRows() 
-	{ 
-		return parentApp.getStorage().getRows(keyspace, cf);
+	{
+		String startKey = getRequest().getResourceRef().getQueryAsForm().getFirstValue("startKey","");
+		int numRows = Integer.parseInt(getRequest().getResourceRef().getQueryAsForm().getFirstValue("numRows", parentApp.DEFAULT_ROWS));
+		return parentApp.getStorage().getRows(keyspace, cf, startKey, numRows);
 	}
 }
