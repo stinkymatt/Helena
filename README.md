@@ -4,10 +4,13 @@ Helena is a simple restful interface to an [Apache Cassandra](http://cassandra.a
 
 This project is at an extremely early development phase, reading the source is the best way to figure our what's going on.
 
+Ack
+---
+Thanks to [Andrei Pozolotin](https://github.com/carrot-garden) for setting up maven. 
+
 Warnings
 --------
 
-- There is no build tool yet. I'm just running this in Eclipse at this point.
 - There are no javadocs yet.
 - The API is read-only right now, read/write will be forthcoming though.
 - Dependency management is manual right now.  See below.
@@ -41,7 +44,8 @@ TODO
 - Test variants other than json.
 - Add more runtime integration options.
 - Add search capability.
-- Finish row paging mechanism.
+- Finish column paging mechanism.
+- Use url matrix params instead for paging?
 - Add support for OrderedPartitioner?
 
 
