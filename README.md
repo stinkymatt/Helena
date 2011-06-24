@@ -43,10 +43,9 @@ TODO
 - Add example Authenticator/Authorizer
 - Test variants other than json.
 - Add more runtime integration options.
-- Add search capability.
-- Finish column paging mechanism.
-- Use url matrix params instead for paging?
+- Use url matrix params to set column range.
 - Add support for OrderedPartitioner?
+- Add support for search clauses other than equals.  Based on GData/OData syntax?
 
 
 
