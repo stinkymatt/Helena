@@ -16,15 +16,18 @@ limitations under the License.
 */
 package com.stinkymatt.helena;
 
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import me.prettyprint.cassandra.model.IndexedSlicesQuery;
 import me.prettyprint.cassandra.serializers.StringSerializer;
 import me.prettyprint.cassandra.service.CassandraHostConfigurator;
 import me.prettyprint.hector.api.Cluster;
 import me.prettyprint.hector.api.Keyspace;
-import me.prettyprint.hector.api.beans.ColumnSlice;
 import me.prettyprint.hector.api.beans.HColumn;
 import me.prettyprint.hector.api.beans.OrderedRows;
 import me.prettyprint.hector.api.beans.Row;
@@ -33,9 +36,7 @@ import me.prettyprint.hector.api.ddl.ColumnFamilyDefinition;
 import me.prettyprint.hector.api.ddl.KeyspaceDefinition;
 import me.prettyprint.hector.api.factory.HFactory;
 import me.prettyprint.hector.api.query.ColumnQuery;
-import me.prettyprint.hector.api.query.QueryResult;
 import me.prettyprint.hector.api.query.RangeSlicesQuery;
-import me.prettyprint.hector.api.query.SliceQuery;
 
 //TODO add search on column values
 //TODO javadoc
@@ -87,42 +88,52 @@ public class StorageAccess
 		for (ColumnFamilyDefinition cf : cfDef)
 		{
 			String cfurl = keyPrefix + '/' + keyspace + '/' + cf.getName();
-			Map<String, String> cfmeta = new HashMap<String, String>();
-			for (ColumnDefinition colDef : cf.getColumnMetadata())
-			{
-				cfmeta.put("column_name", colDef.toString());
-				cfmeta.put("validation_class", colDef.getValidationClass());
-				cfmeta.put("index_name", colDef.getIndexName());
-				cfmeta.put("index_type", colDef.getIndexType().toString());
-			}
-			if (cfmeta.isEmpty()) cfmeta.put("metadata", "n/a");
-			rval.put(cfurl, cfmeta);
+
+			String comment = cf.getComment();
+			Map<String, String> commentMap = new HashMap<String, String>();
+			commentMap.put("comment", comment);
+			rval.put(cfurl, commentMap);
 		}
 		return rval;
 	}
-	
 
-	public Map<String, String> getColumnsForKey(String keyspace, String cf, String key, boolean reverse, int numCols)
+	public Map<String, Map<String, String>> getColumnFamily(String keyspace, String cf) throws CharacterCodingException 
 	{
-		Keyspace ks = getKeyspaceForName(keyspace);
-		SliceQuery<String, String, String> q = HFactory.createSliceQuery(ks, s, s, s);
-		q.setColumnFamily(cf);
-		q.setKey(key);
-		//TODO Add support for paging columns
-		q.setRange("", "", reverse, numCols);
-		QueryResult<ColumnSlice<String, String>> cols = q.execute();
-		HashMap<String, String> rval = new HashMap<String, String>();
-		String urlkey = keyPrefix + '/' + keyspace + '/' + cf +'/' + key + '/';
-		for(HColumn<String, String> col : cols.get().getColumns())
+		KeyspaceDefinition keyspaceDef = cluster.describeKeyspace(keyspace.toString());
+		List<ColumnFamilyDefinition> cfDef = keyspaceDef.getCfDefs();
+		Map<String, Map<String, String>> rval = new HashMap<String, Map<String, String>>();
+		for (ColumnFamilyDefinition cfentry : cfDef)
 		{
-			rval.put(urlkey + col.getName(), col.getValue());
+			if (cfentry.getName().equals(cf))
+			{
+				//Handle Metadata
+				Charset charset = Charset.forName("UTF8"); //TODO add handling for other types
+				CharsetDecoder decoder = charset.newDecoder();
+
+				Map<String, String> cfmeta = new HashMap<String, String>();
+				for (ColumnDefinition colDef : cfentry.getColumnMetadata())
+				{
+					String colName = decoder.decode(colDef.getName()).toString();
+					cfmeta.put("column_name", colName);
+					cfmeta.put("validation_class", colDef.getValidationClass());
+					cfmeta.put("index_name", colDef.getIndexName());
+					cfmeta.put("index_type", colDef.getIndexType().toString());
+				}
+				rval.put("metadata", cfmeta);
+				//Handle page link
+				Map<String, String> link = new HashMap<String, String>();
+				link.put("href", keyPrefix + '/' + keyspace + '/' + cf + "/?$nextn=" + defaultNumRows);
+				rval.put("browse", link);
+				//Handle search template
+				//TODO check for existence of indexed column, use one as example col.
+				Map<String, String> search = new HashMap<String, String>();
+				search.put("href",  keyPrefix + '/' + keyspace + '/' + cf + "/?email=somebody@example.com");
+				//TODO I mean it, make the above link better.
+				rval.put("search", search);
+				break;
+			}
 		}
 		return rval;
-	}
-
-	public Map<String, String> getColumnsForKey(String keyspace, String cf, String key)
-	{
-		return getColumnsForKey(keyspace, cf, key, false, defaultNumCols);
 	}
 	
 	public Map<String, Map<String, String>> getRows(String keyspace, String cf, String startKey, int numRows, boolean reverse, int numCols)
@@ -135,6 +146,54 @@ public class StorageAccess
 		rowsQuery.setRowCount(numRows + 1);
 
 		OrderedRows<String, String, String> result = rowsQuery.execute().get();
+		return resultToMap(keyspace, cf, numRows, result);
+	}
+
+	public Map<String, Map<String, String>> getRows(String keyspace, String cf, String startKey, int numRows)
+	{
+		return getRows(keyspace, cf, startKey, numRows, false, defaultNumCols);
+	}
+	
+	public Map<String, String> getColumn(String keyspace, String cf, String key, String colName)
+	{
+		Keyspace ks = getKeyspaceForName(keyspace);
+		ColumnQuery<String, String, String> columnQuery = HFactory.createStringColumnQuery(ks);
+		columnQuery.setColumnFamily(cf).setKey(key).setName(colName);
+		HColumn<String, String> result = columnQuery.execute().get();
+		Map<String, String> rval = new HashMap<String, String>();
+		String urlkey = keyPrefix + '/' + keyspace + '/' + cf +'/' + '/' + key + '/' + result.getName();
+		rval.put(urlkey, result.getValue());
+		return rval;
+	}
+	
+	public Map<String, Map<String, String>> getQueriedRows(String keyspace, String cf, String query, int numRows, boolean reverse, int numCols)
+	{
+		Keyspace ks = getKeyspaceForName(keyspace);
+		IndexedSlicesQuery<String, String, String> indexedSlicesQuery =
+		HFactory.createIndexedSlicesQuery(ks, s, s, s);
+		indexedSlicesQuery.setColumnFamily(cf);
+		indexedSlicesQuery.setRange("","", reverse, numCols);		
+		indexedSlicesQuery.setStartKey("");
+		indexedSlicesQuery.setRowCount(numRows);
+
+		for (String clause : query.split("&"))
+		{
+			String[] keyval = clause.split("=");
+			indexedSlicesQuery.addEqualsExpression(keyval[0], keyval[1]);
+		}
+		//indexedSlicesQuery.addEqualsExpression("email", "stinkymatt@gmail.com");
+		OrderedRows<String, String, String> result = indexedSlicesQuery.execute().get();
+		//result.get().getByKey("").getColumnSlice().getColumns().get(2).getClock()
+		return resultToMap(keyspace, cf, numRows, result);
+	}
+	
+	public Map<String, Map<String, String>> getQueriedRows(String keyspace, String cf, String query)
+	{
+		return getQueriedRows(keyspace, cf, query, defaultNumRows, false, defaultNumCols);
+	}
+
+	private Map<String, Map<String, String>> resultToMap(String keyspace,
+			String cf, int numRows, OrderedRows<String, String, String> result) {
 		Map<String, Map<String, String>> rval = new HashMap<String, Map<String, String>>();
 		String keyurl = keyPrefix + '/' + keyspace + '/' + cf +'/';
 		int processedRows = 0;
@@ -144,7 +203,7 @@ public class StorageAccess
 			//handle link to next page
 			if (processedRows >= numRows)
 			{
-				rowKey = keyPrefix + '/' + keyspace + '/' + cf + "?startKey=" + r.getKey() + "&numRows=" + numRows;
+				rowKey = keyPrefix + '/' + keyspace + '/' + cf + "/" + r.getKey() + "?$nextn=" + numRows;
 				//assert r.getKey == result.peekLast().getKey()?
 				Map<String, String> link = new HashMap<String, String>();
 				link.put("href", rowKey);
@@ -162,23 +221,6 @@ public class StorageAccess
 			}
 			processedRows++;
 		}
-		return rval;
-	}
-	
-	public Map<String, Map<String, String>> getRows(String keyspace, String cf, String startKey, int numRows)
-	{
-		return getRows(keyspace, cf, startKey, numRows, false, defaultNumCols);
-	}
-	
-	public Map<String, String> getColumn(String keyspace, String cf, String key, String colName)
-	{
-		Keyspace ks = getKeyspaceForName(keyspace);
-		ColumnQuery<String, String, String> columnQuery = HFactory.createStringColumnQuery(ks);
-		columnQuery.setColumnFamily(cf).setKey(key).setName(colName);
-		HColumn<String, String> result = columnQuery.execute().get();
-		Map<String, String> rval = new HashMap<String, String>();
-		String urlkey = keyPrefix + '/' + keyspace + '/' + cf +'/' + '/' + key + '/' + result.getName();
-		rval.put(urlkey, result.getValue());
 		return rval;
 	}
 }

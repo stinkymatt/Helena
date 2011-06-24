@@ -25,6 +25,7 @@ public abstract class AbstractCassandraResource extends ServerResource
 	String keyspace;
 	String cf;
 	String key;
+	String lastkey;
 	String column;
 
 	public void configureResource()
@@ -32,6 +33,7 @@ public abstract class AbstractCassandraResource extends ServerResource
 		keyspace = (String) getRequestAttributes().get("keyspace");
 		cf = (String) getRequestAttributes().get("cf");
 		key = (String) getRequestAttributes().get("key");
+		//lastkey = (String) getRequestAttributes().get("lastkey");
 		column = (String) getRequestAttributes().get("column");
 	}
 

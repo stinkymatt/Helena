@@ -16,6 +16,7 @@ limitations under the License.
 */
 package com.stinkymatt.helena;
 
+import java.nio.charset.CharacterCodingException;
 import java.util.Map;
 
 import org.restlet.resource.Get;
@@ -23,10 +24,13 @@ import org.restlet.resource.Get;
 public final class CFResource extends AbstractCassandraResource
 {
 	@Get
-	public Map<String, Map<String,String>> getRows() 
+	public Map<String, Map<String,String>> getRows() throws CharacterCodingException 
 	{
-		String startKey = getRequest().getResourceRef().getQueryAsForm().getFirstValue("startKey","");
-		int numRows = Integer.parseInt(getRequest().getResourceRef().getQueryAsForm().getFirstValue("numRows", parentApp.DEFAULT_ROWS));
-		return parentApp.getStorage().getRows(keyspace, cf, startKey, numRows);
+		//String startKey = getRequest().getResourceRef().getQueryAsForm().getFirstValue("$startKey","");
+		//int numRows = Integer.parseInt(getRequest().getResourceRef().getQueryAsForm().getFirstValue("$numRows", HelenaApp.DEFAULT_ROWS));
+		//return parentApp.getStorage().getRows(keyspace, cf, startKey, numRows);
+		String columnQuery = getRequest().getResourceRef().getQuery();
+		if (columnQuery == null) return parentApp.getStorage().getColumnFamily(keyspace, cf);
+		else return parentApp.getStorage().getQueriedRows(keyspace, cf, columnQuery);
 	}
 }

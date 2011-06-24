@@ -24,7 +24,7 @@ import org.restlet.routing.Router;
 
 public final class HelenaApp extends Application
 {
-	public static final String DEFAULT_ROWS = "100";
+	public static final String DEFAULT_ROWS = "1";
 	private final StorageAccess storage;
 	private final String contextRoot;
 	
@@ -54,6 +54,7 @@ public final class HelenaApp extends Application
 		router.attach("", DBResource.class);
 		router.attach("/{keyspace}", KSResource.class);
 		router.attach("/{keyspace}/{cf}", CFResource.class);
+		router.attach("/{keyspace}/{cf}/", KeyResource.class);//TODO treat this as FOUND? 
 		router.attach("/{keyspace}/{cf}/{key}", KeyResource.class);
 		router.attach("/{keyspace}/{cf}/{key}/{column}", ColumnResource.class);
 		return router;
