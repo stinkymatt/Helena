@@ -26,9 +26,6 @@ public final class CFResource extends AbstractCassandraResource
 	@Get
 	public Map<String, Map<String,String>> getRows() throws CharacterCodingException 
 	{
-		//String startKey = getRequest().getResourceRef().getQueryAsForm().getFirstValue("$startKey","");
-		//int numRows = Integer.parseInt(getRequest().getResourceRef().getQueryAsForm().getFirstValue("$numRows", HelenaApp.DEFAULT_ROWS));
-		//return parentApp.getStorage().getRows(keyspace, cf, startKey, numRows);
 		String columnQuery = getRequest().getResourceRef().getQuery();
 		if (columnQuery == null) return parentApp.getStorage().getColumnFamily(keyspace, cf);
 		else return parentApp.getStorage().getQueriedRows(keyspace, cf, columnQuery);
