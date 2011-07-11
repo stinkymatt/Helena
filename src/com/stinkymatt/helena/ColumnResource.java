@@ -18,6 +18,7 @@ package com.stinkymatt.helena;
 
 import java.util.Map;
 
+import org.restlet.resource.Delete;
 import org.restlet.resource.Get;
 import org.restlet.resource.Put;
 
@@ -33,5 +34,11 @@ public final class ColumnResource extends AbstractCassandraResource
 	public void setColumn(String colVal)
 	{
 		parentApp.getStorage().setColumn(keyspace, cf, key, column, colVal);
+	}
+	
+	@Delete
+	public void removeColumn()
+	{
+		parentApp.getStorage().removeColumn(keyspace, cf, key, column);
 	}
 }

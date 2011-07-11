@@ -229,4 +229,12 @@ public class StorageAccess
 		Mutator<String> mutator = HFactory.createMutator(ks, s);
 		mutator.insert(key, cf, HFactory.createStringColumn(col, colVal));
 	}
+
+	public void removeColumn(String keyspace, String cf, String key, String column) 
+	{
+		// TODO Auto-generated method stub
+		Keyspace ks = getKeyspaceForName(keyspace);
+		Mutator<String> mutator = HFactory.createMutator(ks, s);
+		mutator.delete(key, cf, column, s);
+	}
 }
