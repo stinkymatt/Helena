@@ -127,7 +127,7 @@ public class StorageAccess
 				//Handle search template
 				//TODO check for existence of indexed column, use one as example col.
 				Map<String, String> search = new HashMap<String, String>();
-				search.put("href",  keyPrefix + '/' + keyspace + '/' + cf + "/?email=somebody@example.com");
+				search.put("href",  keyPrefix + '/' + keyspace + '/' + cf + "?email=somebody@example.com");
 				//TODO I mean it, make the above link better.
 				rval.put("search", search);
 				break;
