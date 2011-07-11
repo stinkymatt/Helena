@@ -12,9 +12,8 @@ Warnings
 --------
 
 - There are no javadocs yet.
-- The API is read-only right now, read/write will be forthcoming though.
-- Dependency management is manual right now.  See below.
 - HelenaDaemon.java is barely more than a template for cusomization at this point.
+- There is now PUT/DELETE capability, but no sample auth provided. Probably a good idea to look at adding a MethodAuthorizer.
 
 Dependencies
 ------------
@@ -39,13 +38,12 @@ Treat the keys of the JSON maps as the resource links.  They are absolute direct
 TODO
 ----
 
-- Read/Write capability
 - Add example Authenticator/Authorizer
 - Test variants other than json.
 - Add more runtime integration options.
 - Use url matrix params to set column range.
 - Add support for OrderedPartitioner?
 - Add support for search clauses other than equals.  Based on GData/OData syntax?
-
+- Add coarser PUT/DELETE, eg PUT/DELETE entire rows.
 
 
