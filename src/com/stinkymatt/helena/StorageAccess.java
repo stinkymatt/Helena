@@ -35,10 +35,10 @@ import me.prettyprint.hector.api.ddl.ColumnDefinition;
 import me.prettyprint.hector.api.ddl.ColumnFamilyDefinition;
 import me.prettyprint.hector.api.ddl.KeyspaceDefinition;
 import me.prettyprint.hector.api.factory.HFactory;
+import me.prettyprint.hector.api.mutation.Mutator;
 import me.prettyprint.hector.api.query.ColumnQuery;
 import me.prettyprint.hector.api.query.RangeSlicesQuery;
 
-//TODO add search on column values
 //TODO javadoc
 //TODO efficiently reuse keyspace objects
 
@@ -181,7 +181,6 @@ public class StorageAccess
 			String[] keyval = clause.split("=");
 			indexedSlicesQuery.addEqualsExpression(keyval[0], keyval[1]);
 		}
-		//indexedSlicesQuery.addEqualsExpression("email", "stinkymatt@gmail.com");
 		OrderedRows<String, String, String> result = indexedSlicesQuery.execute().get();
 		//result.get().getByKey("").getColumnSlice().getColumns().get(2).getClock()
 		return resultToMap(keyspace, cf, numRows, result);
@@ -222,5 +221,12 @@ public class StorageAccess
 			processedRows++;
 		}
 		return rval;
+	}
+
+	public void setColumn(String keyspace, String cf, String key, String col, String colVal) 
+	{
+		Keyspace ks = getKeyspaceForName(keyspace);
+		Mutator<String> mutator = HFactory.createMutator(ks, s);
+		mutator.insert(key, cf, HFactory.createStringColumn(col, colVal));
 	}
 }

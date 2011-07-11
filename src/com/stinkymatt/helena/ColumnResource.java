@@ -19,12 +19,19 @@ package com.stinkymatt.helena;
 import java.util.Map;
 
 import org.restlet.resource.Get;
+import org.restlet.resource.Put;
 
 public final class ColumnResource extends AbstractCassandraResource
 {
 	@Get
-	public Map<String, String> getColumns() 
+	public Map<String, String> getColumn() 
 	{ 
 		return parentApp.getStorage().getColumn(keyspace, cf, key, column);
+	}
+	
+	@Put
+	public void setColumn(String colVal)
+	{
+		parentApp.getStorage().setColumn(keyspace, cf, key, column, colVal);
 	}
 }
