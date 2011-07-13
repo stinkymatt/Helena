@@ -22,6 +22,7 @@ import java.nio.charset.CharsetDecoder;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import me.prettyprint.cassandra.model.IndexedSlicesQuery;
 import me.prettyprint.cassandra.serializers.StringSerializer;
@@ -40,10 +41,13 @@ import me.prettyprint.hector.api.query.ColumnQuery;
 import me.prettyprint.hector.api.query.RangeSlicesQuery;
 
 //TODO javadoc
-//TODO efficiently reuse keyspace objects
+//TODO Add cluster configuration
+//TODO improve URL building to reduce duplication/boilerplate code
 
 public class StorageAccess 
 {
+	private final String numRowsVar = "$nextn";
+	private final Map<String, Keyspace> keyspaces = new ConcurrentHashMap<String, Keyspace>();
 	String clusterName = System.getProperty("helena.cluster.name","cluster");
 	//TODO make configurable
 	int defaultNumCols = 100;
@@ -51,7 +55,7 @@ public class StorageAccess
 	Cluster cluster;
 	private String keyPrefix;
 	
-	private static StringSerializer s = StringSerializer.get();
+	private static final StringSerializer s = StringSerializer.get();
 	
 	public StorageAccess(String keyPrefix)
 	{
@@ -60,10 +64,19 @@ public class StorageAccess
 		cluster = HFactory.getOrCreateCluster(clusterName, new CassandraHostConfigurator("localhost:9160"));
 	}
 	
+	public String getNumRowsVar() {
+		return numRowsVar;
+	}
+
 	public Keyspace getKeyspaceForName(String keyspace)
 	{
-		//TODO Add hashmap for mutiple keyspace connections
-		return HFactory.createKeyspace(keyspace, cluster);
+		Keyspace rval = keyspaces.get(keyspace);
+		if (rval == null)
+		{
+			rval = HFactory.createKeyspace(keyspace, cluster);
+			keyspaces.put(keyspace, rval);
+		}
+		return rval;
 	}
 	
 	public Map<String, Map<String,String>> getKeyspaces()
@@ -122,7 +135,7 @@ public class StorageAccess
 				rval.put("metadata", cfmeta);
 				//Handle page link
 				Map<String, String> link = new HashMap<String, String>();
-				link.put("href", keyPrefix + '/' + keyspace + '/' + cf + "/?$nextn=" + defaultNumRows);
+				link.put("href", keyPrefix + '/' + keyspace + '/' + cf + "/?$" + numRowsVar + "=" + defaultNumRows);
 				rval.put("browse", link);
 				//Handle search template
 				//TODO check for existence of indexed column, use one as example col.
@@ -176,13 +189,13 @@ public class StorageAccess
 		indexedSlicesQuery.setStartKey("");
 		indexedSlicesQuery.setRowCount(numRows);
 
+		//TODO ensure correct support for $vars in query string. (ie: don't add as hector query expressions)
 		for (String clause : query.split("&"))
 		{
 			String[] keyval = clause.split("=");
 			indexedSlicesQuery.addEqualsExpression(keyval[0], keyval[1]);
 		}
 		OrderedRows<String, String, String> result = indexedSlicesQuery.execute().get();
-		//result.get().getByKey("").getColumnSlice().getColumns().get(2).getClock()
 		return resultToMap(keyspace, cf, numRows, result);
 	}
 	
@@ -202,7 +215,7 @@ public class StorageAccess
 			//handle link to next page
 			if (processedRows >= numRows)
 			{
-				rowKey = keyPrefix + '/' + keyspace + '/' + cf + "/" + r.getKey() + "?$nextn=" + numRows;
+				rowKey = keyPrefix + '/' + keyspace + '/' + cf + "/" + r.getKey() + "?" + numRowsVar + "=" + numRows;
 				//assert r.getKey == result.peekLast().getKey()?
 				Map<String, String> link = new HashMap<String, String>();
 				link.put("href", rowKey);
@@ -232,7 +245,6 @@ public class StorageAccess
 
 	public void removeColumn(String keyspace, String cf, String key, String column) 
 	{
-		// TODO Auto-generated method stub
 		Keyspace ks = getKeyspaceForName(keyspace);
 		Mutator<String> mutator = HFactory.createMutator(ks, s);
 		mutator.delete(key, cf, column, s);

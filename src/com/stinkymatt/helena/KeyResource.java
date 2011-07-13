@@ -24,9 +24,13 @@ public final class KeyResource extends AbstractCassandraResource
 {	
 	@Get
 	public Map<String, Map<String, String>> getColumns() 
-	{ 
-		//TODO Abstract query paging specifics out of resource
-		int numRows = Integer.parseInt(getRequest().getResourceRef().getQueryAsForm().getFirstValue("$nextn", HelenaApp.DEFAULT_ROWS));
-		return parentApp.getStorage().getRows(keyspace, cf, key, numRows);
+	{
+		StorageAccess storage = parentApp.getStorage();
+		int numRows = Integer.parseInt(
+			getRequest().getResourceRef().getQueryAsForm().getFirstValue(
+				storage.getNumRowsVar(), String.valueOf(storage.defaultNumRows)
+			)
+		);
+		return storage.getRows(keyspace, cf, key, numRows);
 	}
 }
