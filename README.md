@@ -34,16 +34,3 @@ To get the jackson extension to work, you'll need the following on your classpat
 HATEOAS Note
 ------------
 Treat the keys of the JSON maps as the resource links.  They are absolute directory paths that are urls for data in cassandra.
-
-TODO
-----
-
-- Add example Authenticator/Authorizer
-- Test variants other than json.
-- Add more runtime integration options.
-- Use url matrix params to set column range.
-- Add support for OrderedPartitioner?
-- Add support for search clauses other than equals.  Based on GData/OData syntax?
-- Add coarser PUT/DELETE, eg PUT/DELETE entire rows.
-
-
