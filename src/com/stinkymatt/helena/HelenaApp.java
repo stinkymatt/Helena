@@ -17,39 +17,54 @@ limitations under the License.
 
 package com.stinkymatt.helena;
 
+import org.restlet.Context;
 import org.restlet.Restlet;
 import org.restlet.Application;
 //import org.restlet.Context;
+import org.restlet.data.Method;
 import org.restlet.routing.Router;
+import org.restlet.security.MethodAuthorizer;
 
 public final class HelenaApp extends Application
 {
 	public static final String DEFAULT_ROWS = "1";
-	private final StorageAccess storage;
+	private StorageAccess storage;
 	private final String contextRoot;
 	
 	public HelenaApp(String tld)
 	{
+		super();
 		this.contextRoot = tld;
-		storage = new StorageAccess(tld);
-		this.getTunnelService().setExtensionsTunnel(true);
 	}
 	
 	public String getContextRoot() { return contextRoot; }
 
-	//TODO Figure out when this should be used...
-//	public HelenaApp(Context ctx)
-//	{
-//		storage = new StorageAccess();
-//		this.getTunnelService().setExtensionsTunnel(true);
-//	}
+	//TODO Confirm this works in GAE
+	public HelenaApp(Context ctx)
+	{
+		super(ctx);
+		this.contextRoot = (String) ctx.getAttributes().get("org.restlet.ext.servlet.offsetPath");
+	}
 
-	public StorageAccess getStorage() {
+	public StorageAccess getStorage() 
+	{
 		return storage;
 	}
 
 	public synchronized Restlet createInboundRoot()
 	{
+		this.getTunnelService().setExtensionsTunnel(true);
+		
+		//TODO Add configurability for these lines
+		storage = new StorageAccess(this.contextRoot);
+		HelenaSimpleAuthenticator authenticator = new HelenaSimpleAuthenticator(getContext(), true);
+		MethodAuthorizer authorizer = new MethodAuthorizer();
+		authorizer.getAnonymousMethods().add(Method.GET);
+		authorizer.getAuthenticatedMethods().add(Method.GET);
+		authorizer.getAuthenticatedMethods().add(Method.PUT);
+		authorizer.getAuthenticatedMethods().add(Method.DELETE);
+		authenticator.setNext(authorizer);
+		
 		Router router = new Router(getContext());
 		router.attach("", DBResource.class);
 		router.attach("/{keyspace}", KSResource.class);
@@ -57,7 +72,9 @@ public final class HelenaApp extends Application
 		router.attach("/{keyspace}/{cf}/", KeyResource.class);//TODO treat this as FOUND? 
 		router.attach("/{keyspace}/{cf}/{key}", KeyResource.class);
 		router.attach("/{keyspace}/{cf}/{key}/{column}", ColumnResource.class);
-		return router;
+		//return router;
+		authorizer.setNext(router);
+		return authenticator;
 	}
 
 }
