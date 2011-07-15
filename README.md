@@ -13,7 +13,6 @@ Warnings
 
 - There are no javadocs yet.
 - HelenaDaemon.java is barely more than a template for cusomization at this point.
-- There is now PUT/DELETE capability, but no sample auth provided. Probably a good idea to look at adding a MethodAuthorizer.
 
 Dependencies
 ------------
