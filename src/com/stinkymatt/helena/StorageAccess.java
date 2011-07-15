@@ -41,7 +41,6 @@ import me.prettyprint.hector.api.query.ColumnQuery;
 import me.prettyprint.hector.api.query.RangeSlicesQuery;
 
 //TODO javadoc
-//TODO Add cluster configuration
 //TODO improve URL building to reduce duplication/boilerplate code
 
 public class StorageAccess 
@@ -49,6 +48,7 @@ public class StorageAccess
 	private final String numRowsVar = "$nextn";
 	private final Map<String, Keyspace> keyspaces = new ConcurrentHashMap<String, Keyspace>();
 	String clusterName = System.getProperty("helena.cluster.name","cluster");
+	String hostPortPairs = System.getProperty("helena.cluster.hosts", "localhost:9160");
 	//TODO make configurable
 	int defaultNumCols = 100;
 	int defaultNumRows = 1; //TODO change this back!
@@ -60,8 +60,7 @@ public class StorageAccess
 	public StorageAccess(String keyPrefix)
 	{
 		this.keyPrefix = "/" + keyPrefix;
-		//TODO add connection configuration
-		cluster = HFactory.getOrCreateCluster(clusterName, new CassandraHostConfigurator("localhost:9160"));
+		cluster = HFactory.getOrCreateCluster(clusterName, new CassandraHostConfigurator(hostPortPairs));
 	}
 	
 	public String getNumRowsVar() {
