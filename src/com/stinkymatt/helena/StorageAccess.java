@@ -134,7 +134,7 @@ public class StorageAccess
 				rval.put("metadata", cfmeta);
 				//Handle page link
 				Map<String, String> link = new HashMap<String, String>();
-				link.put("href", keyPrefix + '/' + keyspace + '/' + cf + "/?$" + numRowsVar + "=" + defaultNumRows);
+				link.put("href", keyPrefix + '/' + keyspace + '/' + cf + "/?" + numRowsVar + "=" + defaultNumRows);
 				rval.put("browse", link);
 				//Handle search template
 				//TODO check for existence of indexed column, use one as example col.
@@ -148,44 +148,54 @@ public class StorageAccess
 		return rval;
 	}
 	
-	public Map<String, Map<String, String>> getRows(String keyspace, String cf, String startKey, int numRows, boolean reverse, int numCols)
+	public Map<String, Map<String, String>> getRows(String keyspace, String cf, String startKey, String colRange, int numRows, boolean reverse, int numCols)
 	{
 		Keyspace ks = getKeyspaceForName(keyspace);
 		RangeSlicesQuery<String, String, String> rowsQuery = HFactory.createRangeSlicesQuery(ks, s, s, s);
 		rowsQuery.setColumnFamily(cf);
 		rowsQuery.setKeys(startKey, "");
-		rowsQuery.setRange("", "", reverse, numCols);
+		if (colRange != null)
+		{
+			String[] cols = colRange.split(",");
+			rowsQuery.setRange(cols[0], cols[1], reverse, numCols);
+		}
+		else
+		{
+			rowsQuery.setRange("", "", reverse, numCols);
+		}
+		
 		rowsQuery.setRowCount(numRows + 1);
 
 		OrderedRows<String, String, String> result = rowsQuery.execute().get();
-		return resultToMap(keyspace, cf, numRows, result);
+		return resultToMap(keyspace, cf, numRows, colRange, result);
 	}
 
-	public Map<String, Map<String, String>> getRows(String keyspace, String cf, String startKey, int numRows)
+	public Map<String, Map<String, String>> getRows(String keyspace, String cf, String startKey, String colRange, int numRows)
 	{
-		return getRows(keyspace, cf, startKey, numRows, false, defaultNumCols);
+		return getRows(keyspace, cf, startKey, colRange, numRows, false, defaultNumCols);
 	}
 	
-	public Map<String, String> getColumn(String keyspace, String cf, String key, String colName)
+	public Map<String, Map<String, String>> getQueriedRows(String keyspace, String cf, String startKey, String colRange, String query, int numRows, boolean reverse, int numCols)
 	{
 		Keyspace ks = getKeyspaceForName(keyspace);
-		ColumnQuery<String, String, String> columnQuery = HFactory.createStringColumnQuery(ks);
-		columnQuery.setColumnFamily(cf).setKey(key).setName(colName);
-		HColumn<String, String> result = columnQuery.execute().get();
-		Map<String, String> rval = new HashMap<String, String>();
-		String urlkey = keyPrefix + '/' + keyspace + '/' + cf +'/' + '/' + key + '/' + result.getName();
-		rval.put(urlkey, result.getValue());
-		return rval;
-	}
-	
-	public Map<String, Map<String, String>> getQueriedRows(String keyspace, String cf, String query, int numRows, boolean reverse, int numCols)
-	{
-		Keyspace ks = getKeyspaceForName(keyspace);
+		//TODO This code is really similar to code in getRows...
+		//tried to do an extract-method here to configure the query passing the Query as a parameter,
+		//however, RangeSlicesQuery and IndexSlicesQuery don't share a parent.
+		//TODO Look at refactoring Hector to simplify this code.
+		//TODO BUG:query hangs if query column is not in slice range.
 		IndexedSlicesQuery<String, String, String> indexedSlicesQuery =
 		HFactory.createIndexedSlicesQuery(ks, s, s, s);
 		indexedSlicesQuery.setColumnFamily(cf);
-		indexedSlicesQuery.setRange("","", reverse, numCols);		
-		indexedSlicesQuery.setStartKey("");
+		if (colRange != null)
+		{
+			String[] cols = colRange.split(",");
+			indexedSlicesQuery.setRange(cols[0], cols[1], reverse, numCols);
+		}
+		else
+		{
+			indexedSlicesQuery.setRange("", "", reverse, numCols);
+		}
+		indexedSlicesQuery.setStartKey(startKey);
 		indexedSlicesQuery.setRowCount(numRows);
 
 		//TODO ensure correct support for $vars in query string. (ie: don't add as hector query expressions)
@@ -195,26 +205,31 @@ public class StorageAccess
 			indexedSlicesQuery.addEqualsExpression(keyval[0], keyval[1]);
 		}
 		OrderedRows<String, String, String> result = indexedSlicesQuery.execute().get();
-		return resultToMap(keyspace, cf, numRows, result);
+		//TODO replace null with colRange
+		return resultToMap(keyspace, cf, numRows, null, result);
 	}
 	
-	public Map<String, Map<String, String>> getQueriedRows(String keyspace, String cf, String query)
+	public Map<String, Map<String, String>> getQueriedRows(String keyspace, String cf, String startKey, int numRows, String colRange, String columnQuery)
 	{
-		return getQueriedRows(keyspace, cf, query, defaultNumRows, false, defaultNumCols);
+		return getQueriedRows(keyspace, cf, startKey, colRange, columnQuery, numRows, false, defaultNumCols);
 	}
 
 	private Map<String, Map<String, String>> resultToMap(String keyspace,
-			String cf, int numRows, OrderedRows<String, String, String> result) {
+			String cf, int numRows, String colRange, OrderedRows<String, String, String> result) {
+		//TODO Add the query string to be carried over for paging
 		Map<String, Map<String, String>> rval = new HashMap<String, Map<String, String>>();
 		String keyurl = keyPrefix + '/' + keyspace + '/' + cf +'/';
+		String matrix = (colRange != null) ? ";" + colRange: "";
 		int processedRows = 0;
+		//TODO make sure query works
+		//TODO what does the comment above mean?
 		for (Row<String,String,String> r : result)
 		{
 			String rowKey;
 			//handle link to next page
 			if (processedRows >= numRows)
 			{
-				rowKey = keyPrefix + '/' + keyspace + '/' + cf + "/" + r.getKey() + "?" + numRowsVar + "=" + numRows;
+				rowKey = keyPrefix + '/' + keyspace + '/' + cf + "/" + r.getKey() + matrix + "?" + numRowsVar + "=" + numRows;
 				//assert r.getKey == result.peekLast().getKey()?
 				Map<String, String> link = new HashMap<String, String>();
 				link.put("href", rowKey);
@@ -234,6 +249,18 @@ public class StorageAccess
 		}
 		return rval;
 	}
+	
+	public Map<String, String> getColumn(String keyspace, String cf, String key, String colName)
+	{
+		Keyspace ks = getKeyspaceForName(keyspace);
+		ColumnQuery<String, String, String> columnQuery = HFactory.createStringColumnQuery(ks);
+		columnQuery.setColumnFamily(cf).setKey(key).setName(colName);
+		HColumn<String, String> result = columnQuery.execute().get();
+		Map<String, String> rval = new HashMap<String, String>();
+		String urlkey = keyPrefix + '/' + keyspace + '/' + cf +'/' + '/' + key + '/' + result.getName();
+		rval.put(urlkey, result.getValue());
+		return rval;
+	}
 
 	public void setColumn(String keyspace, String cf, String key, String col, String colVal) 
 	{
@@ -248,4 +275,5 @@ public class StorageAccess
 		Mutator<String> mutator = HFactory.createMutator(ks, s);
 		mutator.delete(key, cf, column, s);
 	}
+
 }

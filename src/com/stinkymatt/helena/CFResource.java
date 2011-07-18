@@ -19,6 +19,7 @@ package com.stinkymatt.helena;
 import java.nio.charset.CharacterCodingException;
 import java.util.Map;
 
+import org.restlet.data.Reference;
 import org.restlet.resource.Get;
 
 public final class CFResource extends AbstractCassandraResource
@@ -27,7 +28,24 @@ public final class CFResource extends AbstractCassandraResource
 	public Map<String, Map<String,String>> getRows() throws CharacterCodingException 
 	{
 		String columnQuery = getRequest().getResourceRef().getQuery();
+		StorageAccess storage = parentApp.getStorage();
+		Reference ref = getRequest().getResourceRef();
 		if (columnQuery == null) return parentApp.getStorage().getColumnFamily(keyspace, cf);
-		else return parentApp.getStorage().getQueriedRows(keyspace, cf, columnQuery);
+		else 
+		{
+			String colRange = ref.getMatrix();
+			if (colRange != null)
+			{
+				cf = cf.substring(0, cf.indexOf(';'));
+			}
+			int numRows = Integer.parseInt(
+					ref.getQueryAsForm().getFirstValue(
+						storage.getNumRowsVar(), String.valueOf(storage.defaultNumRows)
+				)
+			);
+			//TODO need to strip out $nextn=n if it's there, temporarily hardcoding higher max for query rows
+			//return storage.getQueriedRows(keyspace, cf, "", numRows, colRange, columnQuery);
+			return storage.getQueriedRows(keyspace, cf, "", 100, colRange, columnQuery);
+		}
 	}
 }
