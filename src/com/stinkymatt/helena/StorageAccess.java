@@ -167,7 +167,7 @@ public class StorageAccess
 		rowsQuery.setRowCount(numRows + 1);
 
 		OrderedRows<String, String, String> result = rowsQuery.execute().get();
-		return resultToMap(keyspace, cf, numRows, colRange, result);
+		return resultToMap(keyspace, cf, null, numRows, colRange, result);
 	}
 
 	public Map<String, Map<String, String>> getRows(String keyspace, String cf, String startKey, String colRange, int numRows)
@@ -196,7 +196,7 @@ public class StorageAccess
 			indexedSlicesQuery.setRange("", "", reverse, numCols);
 		}
 		indexedSlicesQuery.setStartKey(startKey);
-		indexedSlicesQuery.setRowCount(numRows);
+		indexedSlicesQuery.setRowCount(numRows + 1);
 
 		//TODO ensure correct support for $vars in query string. (ie: don't add as hector query expressions)
 		for (String clause : query.split("&"))
@@ -205,8 +205,7 @@ public class StorageAccess
 			indexedSlicesQuery.addEqualsExpression(keyval[0], keyval[1]);
 		}
 		OrderedRows<String, String, String> result = indexedSlicesQuery.execute().get();
-		//TODO replace null with colRange
-		return resultToMap(keyspace, cf, numRows, null, result);
+		return resultToMap(keyspace, cf, query, numRows, colRange, result);
 	}
 	
 	public Map<String, Map<String, String>> getQueriedRows(String keyspace, String cf, String startKey, int numRows, String colRange, String columnQuery)
@@ -215,21 +214,19 @@ public class StorageAccess
 	}
 
 	private Map<String, Map<String, String>> resultToMap(String keyspace,
-			String cf, int numRows, String colRange, OrderedRows<String, String, String> result) {
-		//TODO Add the query string to be carried over for paging
+			String cf, String query, int numRows, String colRange, OrderedRows<String, String, String> result) {
 		Map<String, Map<String, String>> rval = new HashMap<String, Map<String, String>>();
 		String keyurl = keyPrefix + '/' + keyspace + '/' + cf +'/';
+		String colQueryPart = (query != null) ? query + "&": "";
 		String matrix = (colRange != null) ? ";" + colRange: "";
 		int processedRows = 0;
-		//TODO make sure query works
-		//TODO what does the comment above mean?
 		for (Row<String,String,String> r : result)
 		{
 			String rowKey;
 			//handle link to next page
 			if (processedRows >= numRows)
 			{
-				rowKey = keyPrefix + '/' + keyspace + '/' + cf + "/" + r.getKey() + matrix + "?" + numRowsVar + "=" + numRows;
+				rowKey = keyPrefix + '/' + keyspace + '/' + cf + "/" + r.getKey() + matrix + "?" + colQueryPart + numRowsVar + "=" + numRows;
 				//assert r.getKey == result.peekLast().getKey()?
 				Map<String, String> link = new HashMap<String, String>();
 				link.put("href", rowKey);
