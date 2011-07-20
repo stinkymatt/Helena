@@ -22,8 +22,6 @@ import org.restlet.data.Form;
 import org.restlet.data.Reference;
 import org.restlet.resource.Get;
 
-//TODO Verify that this handles "page 2" of a query
-
 public final class KeyResource extends AbstractCassandraResource
 {	
 	@Get
@@ -45,29 +43,11 @@ public final class KeyResource extends AbstractCassandraResource
 		{
 			key = key.substring(0, key.indexOf(';'));
 		}
-		if (columnQuery == null) return storage.getRows(keyspace, cf, key, colRange, numRows);
+		if (columnQuery.equals("")) return storage.getRows(keyspace, cf, key, colRange, numRows);
 		else 
 		{
 			return storage.getQueriedRows(keyspace, cf, key, numRows, colRange, columnQuery);
 		}
-		
-		
-/*		
-		StorageAccess storage = parentApp.getStorage();
-		Reference ref = getRequest().getResourceRef();
-		String colRange = ref.getMatrix();
-		if (colRange != null)
-		{
-			key = key.substring(0, key.indexOf(';'));
-		}
-		int numRows = Integer.parseInt(
-			ref.getQueryAsForm().getFirstValue(
-				storage.getNumRowsVar(), String.valueOf(storage.defaultNumRows)
-			)
-		);
-		ref.getQueryAsForm().removeAll(storage.getNumRowsVar());
-		return storage.getRows(keyspace, cf, key, colRange, numRows);
-*/
 	}
 	
 }

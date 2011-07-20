@@ -39,7 +39,7 @@ public final class CFResource extends AbstractCassandraResource
 		Form theQuery = ref.getQueryAsForm();
 		theQuery.removeAll(storage.getNumRowsVar(), true);
 		String columnQuery = Reference.decode(theQuery.getQueryString());
-		if (columnQuery == null) return storage.getColumnFamily(keyspace, cf);
+		if (columnQuery.equals("")) return storage.getColumnFamily(keyspace, cf);
 		else 
 		{
 			String colRange = ref.getMatrix();
