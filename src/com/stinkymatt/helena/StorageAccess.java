@@ -254,7 +254,7 @@ public class StorageAccess
 		columnQuery.setColumnFamily(cf).setKey(key).setName(colName);
 		HColumn<String, String> result = columnQuery.execute().get();
 		Map<String, String> rval = new HashMap<String, String>();
-		String urlkey = keyPrefix + '/' + keyspace + '/' + cf +'/' + '/' + key + '/' + result.getName();
+		String urlkey = keyPrefix + '/' + keyspace + '/' + cf + '/' + key + '/' + result.getName();
 		rval.put(urlkey, result.getValue());
 		return rval;
 	}
