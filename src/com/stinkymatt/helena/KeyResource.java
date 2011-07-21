@@ -20,6 +20,7 @@ import java.util.Map;
 
 import org.restlet.data.Form;
 import org.restlet.data.Reference;
+import org.restlet.resource.Delete;
 import org.restlet.resource.Get;
 
 public final class KeyResource extends AbstractCassandraResource
@@ -50,4 +51,10 @@ public final class KeyResource extends AbstractCassandraResource
 		}
 	}
 	
+	@Delete
+	public void removeColumn()
+	{
+		parentApp.getStorage().removeColumn(keyspace, cf, key, null);
+	}
+
 }
