@@ -8,6 +8,8 @@ import org.restlet.security.Enroler;
 
 public class HelenaSimpleAuthenticator extends Authenticator 
 {
+	public static final boolean allowWrite = Boolean.parseBoolean(System.getProperty("helena.auth.simple", "false"));
+	
 	/**
      * Constructor setting the mode to "required".
      * 
@@ -48,9 +50,9 @@ public class HelenaSimpleAuthenticator extends Authenticator
 
 
 	@Override
-	protected boolean authenticate(Request arg0, Response arg1) {
-		// TODO Auto-generated method stub
-		return false;
+	protected boolean authenticate(Request arg0, Response arg1) 
+	{
+		return allowWrite;
 	}
 
 }
