@@ -45,10 +45,18 @@ import me.prettyprint.hector.api.query.RangeSlicesQuery;
 
 public class StorageAccess 
 {
+	public static final String GT = System.getProperty("helena.expr.gt", "gt");
+	public static final String GTE = System.getProperty("helena.expr.gte", "gte");
+	public static final String LT = System.getProperty("helena.expr.lt", "lt");
+	public static final String LTE = System.getProperty("helena.expr.lte", "lte");
+	
 	private final String numRowsVar = "$nextn";
-	private final Map<String, Keyspace> keyspaces = new ConcurrentHashMap<String, Keyspace>();
+	private final String filterVar = "$filter";
 	String clusterName = System.getProperty("helena.cluster.name","cluster");
 	String hostPortPairs = System.getProperty("helena.cluster.hosts", "localhost:9160");
+
+	private final Map<String, Keyspace> keyspaces = new ConcurrentHashMap<String, Keyspace>();
+
 	//TODO make configurable
 	int defaultNumCols = 100;
 	int defaultNumRows = 1; //TODO change this back!
@@ -198,14 +206,32 @@ public class StorageAccess
 		indexedSlicesQuery.setStartKey(startKey);
 		indexedSlicesQuery.setRowCount(numRows + 1);
 
-		//TODO ensure correct support for $vars in query string. (ie: don't add as hector query expressions)
+		parseQuery(query, indexedSlicesQuery);
+		OrderedRows<String, String, String> result = indexedSlicesQuery.execute().get();
+		return resultToMap(keyspace, cf, query, numRows, colRange, result);
+	}
+
+	private void parseQuery(String query, final IndexedSlicesQuery<String, String, String> indexedSlicesQuery) 
+	{
+		//TODO Need to propagate these ArrayIndexOutOfBoundsExceptions back to restlet for better error handling
 		for (String clause : query.split("&"))
 		{
 			String[] keyval = clause.split("=");
-			indexedSlicesQuery.addEqualsExpression(keyval[0], keyval[1]);
+			if (keyval[0].equals(filterVar))
+			{	
+				String[] expr = keyval[1].split(" ");
+				
+				if (expr[1].equals(GT))
+					indexedSlicesQuery.addGtExpression(expr[0], expr[2]);
+				else if (expr[1].equals(GTE))
+					indexedSlicesQuery.addGteExpression(expr[0], expr[2]);
+				else if (expr[1].equals(LT))
+					indexedSlicesQuery.addLtExpression(expr[0], expr[2]);
+				else if (expr[1].equals(LTE))
+					indexedSlicesQuery.addLteExpression(expr[0], expr[2]);
+			}
+			else indexedSlicesQuery.addEqualsExpression(keyval[0], keyval[1]);
 		}
-		OrderedRows<String, String, String> result = indexedSlicesQuery.execute().get();
-		return resultToMap(keyspace, cf, query, numRows, colRange, result);
 	}
 	
 	public Map<String, Map<String, String>> getQueriedRows(String keyspace, String cf, String startKey, int numRows, String colRange, String columnQuery)
