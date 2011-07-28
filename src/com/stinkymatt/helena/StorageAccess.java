@@ -135,12 +135,13 @@ public class StorageAccess
 				for (ColumnDefinition colDef : cfentry.getColumnMetadata())
 				{
 					String colName = decoder.decode(colDef.getName()).toString();
-					cfmeta.put("column_name", colName);
+					//cfmeta.put("column_name", colName);
 					cfmeta.put("validation_class", colDef.getValidationClass());
 					cfmeta.put("index_name", colDef.getIndexName());
 					cfmeta.put("index_type", colDef.getIndexType().toString());
+					rval.put("column_metadata:"+colName, cfmeta);
 				}
-				rval.put("metadata", cfmeta);
+				//rval.put("metadata", cfmeta);
 				//Handle page link
 				Map<String, String> link = new HashMap<String, String>();
 				link.put("href", keyPrefix + '/' + keyspace + '/' + cf + "/?" + numRowsVar + "=" + defaultNumRows);
