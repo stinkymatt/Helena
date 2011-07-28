@@ -19,6 +19,7 @@ package com.stinkymatt.helena;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -164,8 +165,22 @@ public class StorageAccess
 		rowsQuery.setKeys(startKey, "");
 		if (colRange != null)
 		{
-			String[] cols = colRange.split(",");
-			rowsQuery.setRange(cols[0], cols[1], reverse, numCols);
+			//String[] cols = colRange.split(",");
+			//rowsQuery.setRange(cols[0], cols[1], reverse, numCols);
+			
+			String[] cols = colRange.split("-");
+			if (colRange.equals(cols[0]))
+			{
+				cols = colRange.split(",");
+				Arrays.sort(cols);
+				rowsQuery.setColumnNames(cols);
+			}
+			else
+			{
+				Arrays.sort(cols);
+				//TODO Check size, throw invalid request trigger
+				rowsQuery.setRange(cols[0], cols[1], reverse, numCols);
+			}
 		}
 		else
 		{
@@ -196,8 +211,19 @@ public class StorageAccess
 		indexedSlicesQuery.setColumnFamily(cf);
 		if (colRange != null)
 		{
-			String[] cols = colRange.split(",");
-			indexedSlicesQuery.setRange(cols[0], cols[1], reverse, numCols);
+			String[] cols = colRange.split("-");
+			if (colRange.equals(cols[0]))
+			{
+				cols = colRange.split(",");
+				Arrays.sort(cols);
+				indexedSlicesQuery.setColumnNames(cols);
+			}
+			else
+			{
+				Arrays.sort(cols);
+				//TODO Check size, throw invalid request trigger
+				indexedSlicesQuery.setRange(cols[0], cols[1], reverse, numCols);
+			}
 		}
 		else
 		{
