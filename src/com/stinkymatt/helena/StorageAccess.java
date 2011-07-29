@@ -19,6 +19,7 @@ package com.stinkymatt.helena;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -35,6 +36,7 @@ import me.prettyprint.hector.api.beans.OrderedRows;
 import me.prettyprint.hector.api.beans.Row;
 import me.prettyprint.hector.api.ddl.ColumnDefinition;
 import me.prettyprint.hector.api.ddl.ColumnFamilyDefinition;
+import me.prettyprint.hector.api.ddl.ColumnIndexType;
 import me.prettyprint.hector.api.ddl.KeyspaceDefinition;
 import me.prettyprint.hector.api.factory.HFactory;
 import me.prettyprint.hector.api.mutation.Mutator;
@@ -118,11 +120,11 @@ public class StorageAccess
 		return rval;
 	}
 
-	public Map<String, Map<String, String>> getColumnFamily(String keyspace, String cf) throws CharacterCodingException 
+	public Map getColumnFamily(String keyspace, String cf) throws CharacterCodingException 
 	{
 		KeyspaceDefinition keyspaceDef = cluster.describeKeyspace(keyspace.toString());
 		List<ColumnFamilyDefinition> cfDef = keyspaceDef.getCfDefs();
-		Map<String, Map<String, String>> rval = new HashMap<String, Map<String, String>>();
+		Map rval = new HashMap();
 		for (ColumnFamilyDefinition cfentry : cfDef)
 		{
 			if (cfentry.getName().equals(cf))
@@ -130,17 +132,23 @@ public class StorageAccess
 				//Handle Metadata
 				Charset charset = Charset.forName("UTF8"); //TODO add handling for other types
 				CharsetDecoder decoder = charset.newDecoder();
-
-				Map<String, String> cfmeta = new HashMap<String, String>();
+				List<Map<String, String>> cfmetaList = new ArrayList<Map<String, String>>(3);
 				for (ColumnDefinition colDef : cfentry.getColumnMetadata())
 				{
+					Map<String, String> cfmeta = new HashMap<String, String>();
 					String colName = decoder.decode(colDef.getName()).toString();
-					//cfmeta.put("column_name", colName);
+					cfmeta.put("column_name", colName);
 					cfmeta.put("validation_class", colDef.getValidationClass());
-					cfmeta.put("index_name", colDef.getIndexName());
-					cfmeta.put("index_type", colDef.getIndexType().toString());
-					rval.put("column_metadata:"+colName, cfmeta);
+					ColumnIndexType idxType = colDef.getIndexType();
+					if (idxType != null)
+					{
+						cfmeta.put("index_type", idxType.toString());
+						cfmeta.put("index_name", colDef.getIndexName());
+					}
+					cfmetaList.add(cfmeta);
 				}
+				
+				rval.put("column_metadata", cfmetaList);
 				//rval.put("metadata", cfmeta);
 				//Handle page link
 				Map<String, String> link = new HashMap<String, String>();
