@@ -66,12 +66,12 @@ public final class HelenaApp extends Application
 		authenticator.setNext(authorizer);
 		
 		Router router = new Router(getContext());
-		router.attach("", DBResource.class);
-		router.attach("/{keyspace}", KSResource.class);
-		router.attach("/{keyspace}/{cf}", CFResource.class);
-		router.attach("/{keyspace}/{cf}/", KeyResource.class);//TODO treat this as FOUND? 
-		router.attach("/{keyspace}/{cf}/{key}", KeyResource.class);
-		router.attach("/{keyspace}/{cf}/{key}/{column}", ColumnResource.class);
+		router.attach("", com.stinkymatt.helena.DBResource.class);
+		router.attach("/{keyspace}", com.stinkymatt.helena.KSResource.class);
+		router.attach("/{keyspace}/{cf}", com.stinkymatt.helena.CFResource.class);
+		router.attach("/{keyspace}/{cf}/", com.stinkymatt.helena.KeyResource.class);//TODO treat this as FOUND? 
+		router.attach("/{keyspace}/{cf}/{key}", com.stinkymatt.helena.KeyResource.class);
+		router.attach("/{keyspace}/{cf}/{key}/{column}", com.stinkymatt.helena.ColumnResource.class);
 		//return router;
 		authorizer.setNext(router);
 		return authenticator;
