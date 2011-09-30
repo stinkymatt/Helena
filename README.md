@@ -2,7 +2,7 @@ Helena
 ======
 Helena is a simple restful interface to an [Apache Cassandra](http://cassandra.apache.org) database.
 
-This project is at an extremely early development phase, reading the source is the best way to figure our what's going on.
+This project is at an extremely early development phase, reading the source is the best way to figure out what's going on.
 
 Ack
 ---
